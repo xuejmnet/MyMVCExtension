@@ -1,0 +1,8 @@
+C:\Project\EUD Framework\Dow.SSD.Framework.Infrastructure\Dow.SSD.Framework.Infrastructure\bin\Debug\Dow.SSD.Framework.Infrastructure.dll
+C:\Project\EUD Framework\Dow.SSD.Framework.Infrastructure\Dow.SSD.Framework.Infrastructure\bin\Debug\Dow.SSD.Framework.Infrastructure.pdb
+C:\Project\EUD Framework\Dow.SSD.Framework.Infrastructure\Dow.SSD.Framework.Infrastructure\obj\Debug\Dow.SSD.Framework.Infrastructure.dll
+C:\Project\EUD Framework\Dow.SSD.Framework.Infrastructure\Dow.SSD.Framework.Infrastructure\obj\Debug\Dow.SSD.Framework.Infrastructure.pdb
+C:\Project\SSD01739\Project\Dow.SSD.Framework.Infrastructure\Dow.SSD.Framework.Infrastructure\bin\Debug\Dow.SSD.Framework.Infrastructure.dll
+C:\Project\SSD01739\Project\Dow.SSD.Framework.Infrastructure\Dow.SSD.Framework.Infrastructure\bin\Debug\Dow.SSD.Framework.Infrastructure.pdb
+C:\Project\SSD01739\Project\Dow.SSD.Framework.Infrastructure\Dow.SSD.Framework.Infrastructure\obj\Debug\Dow.SSD.Framework.Infrastructure.dll
+C:\Project\SSD01739\Project\Dow.SSD.Framework.Infrastructure\Dow.SSD.Framework.Infrastructure\obj\Debug\Dow.SSD.Framework.Infrastructure.pdb
