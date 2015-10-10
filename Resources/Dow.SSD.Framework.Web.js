@@ -6,30 +6,34 @@
     var conditionalDisplayItem = $("[conditionaldisplay='true']")
     for (var i = 0; i < conditionalDisplayItem.length; i++) {
         var item = conditionalDisplayItem[i];
-        var trigger = $(item).attr("trigger");
-        if (arrayContains(triggeredItemList, trigger))
-        {
-            continue;
+        var triggers = $(item).attr("triggers").split("|");
+        for (var j = 0; j < triggers.length - 1; j++) {
+            var trigger = triggers[j];
+            if (arrayContains(triggeredItemList, trigger)) {
+                continue;
+            }
+            else {
+                triggeredItemList.push(trigger);
+            }
+            $("#" + trigger).change(trigger, DisplayChecker);
+            $("#" + trigger).blur(trigger, DisplayChecker);
         }
-        else
-        {
-            triggeredItemList.push(trigger);
-        }
-        $("#" + trigger).change(trigger, DisplayChecker);
-        $("#" + trigger).blur(trigger, DisplayChecker);
     }
     triggeredItemList = new Array();
     for (var i = 0; i < conditionalDisplayItem.length; i++) {
         var item = conditionalDisplayItem[i];
-        var trigger = $(item).attr("trigger");
-        if (arrayContains(triggeredItemList, trigger)) {
-            continue;
+        var triggers = $(item).attr("triggers").split("|");
+        for (var j = 0; j < triggers.length - 1; j++) {
+            var trigger = triggers[j];
+            if (arrayContains(triggeredItemList, trigger)) {
+                continue;
+            }
+            else {
+                triggeredItemList.push(trigger);
+            }
+            $("#" + trigger).trigger("change", trigger);
+            $("#" + trigger).trigger("blur", trigger);
         }
-        else {
-            triggeredItemList.push(trigger);
-        }
-        $("#" + trigger).trigger("change", trigger);
-        $("#" + trigger).trigger("blur", trigger);
     }
     RegisterCalculateField();
     
@@ -72,7 +76,7 @@ function RegisterCalculateField()
 
 function DisplayChecker(trigger) {
     var triggerName = trigger.data != undefined ? trigger.data : trigger;
-    var triggerControledElements = $("[trigger='" + triggerName + "']")
+    var triggerControledElements = $("[triggers*='" + triggerName + "']")
     for (var j = 0; j < triggerControledElements.length; j++) {
         var parent = $("[field='" + triggerName + "'");
         if (parent.css("display") == "none") {
@@ -81,22 +85,32 @@ function DisplayChecker(trigger) {
         var currentControledElement = triggerControledElements[j];
         var triggerValue = $(currentControledElement).attr("conditionValue");
         var condition = $(currentControledElement).attr("condition");
+        var expression = $(currentControledElement).attr("expression");
         var display = false;
-        var value = $(this).val().toLowerCase();
-        if ($(this).attr("type") == "checkbox")
+        var triggers = $(currentControledElement).attr("triggers").split("|");
+        for (var k = 0; k < triggers.length - 1; k++)
         {
-            value = this.checked.toString();
+            var currentTrigger = triggers[k];
+            var triggerDom = $("#" + currentTrigger);
+            var value = triggerDom.val();
+            expression = expression.replace(new RegExp(currentTrigger,'g'), "'" + value + "'");
         }
-        switch (condition) {
-            case "Equal":
-                display = value == triggerValue.toLowerCase();
-                break;
-            case "NotEqual":
-                display = value != triggerValue.toLowerCase();
-                break;
-            default:
-                display = false;
-        }
+        display = eval(expression);
+        //var value = $(this).val().toLowerCase();
+        //if ($(this).attr("type") == "checkbox")
+        //{
+        //    value = this.checked.toString();
+        //}
+        //switch (condition) {
+        //    case "Equal":
+        //        display = value == triggerValue.toLowerCase();
+        //        break;
+        //    case "NotEqual":
+        //        display = value != triggerValue.toLowerCase();
+        //        break;
+        //    default:
+        //        display = false;
+        //}
         if (display) {
             if ($(currentControledElement).attr("displayMode") != null ||
                 $(currentControledElement).attr("displayMode") != undefined) {
@@ -113,7 +127,7 @@ function DisplayChecker(trigger) {
             $(currentControledElement).css("display", "none");
             //$(currentControledElement).find("input[type='text']").val("");
             var field = $(currentControledElement).attr("field");
-            var child = $("[trigger='" + field + "']");
+            var child = $("[triggers*='" + field + "']");
             child.css("display", "none");
 
         }

@@ -176,30 +176,31 @@ namespace Dow.SSD.Framework
         /// <returns></returns>
         public static MvcHtmlString DisplayWhen<TModel>(this HtmlHelper<TModel> helper,Expression<Func<TModel,bool>> condition)
         {
-            if (!(condition.Body is BinaryExpression))
+            var myExpressionVisitor = new MyExpressionVisitor();
+            myExpressionVisitor.Visit(condition);
+            var properties = myExpressionVisitor.PropertiesInExpression.Distinct();
+            var expressionText = ExpressionHelper.GetExpressionText(condition);
+            var fullName = helper.ViewContext.ViewData.TemplateInfo.GetFullHtmlFieldName(expressionText);
+            var prefix = !string.IsNullOrEmpty(fullName) ? fullName.Substring(0, fullName.LastIndexOf(".")) : string.Empty;
+            var jsExpression = myExpressionVisitor.JSExpression;
+            var jsPorperty = string.Empty;
+            var trigers = new StringBuilder();
+            foreach(var property in properties)
             {
-                throw new InvalidOperationException("The displayWhen only support BinaryExpression");
+                jsPorperty = !string.IsNullOrEmpty(prefix) ? prefix + "_" + property : property;
+                jsExpression = jsExpression.Replace(property, jsPorperty.Replace("[", "_").Replace("]", "_"));
+                trigers.Append(jsPorperty);
+                trigers.Append("|");
             }
-            var propertyAccessor = (condition.Body as BinaryExpression).Left;
-            if(!(propertyAccessor is MemberExpression))
-            {
-                throw new InvalidOperationException("The left side of the condition expression must be a member accessor expression");
-            }
-            var conditionValueExpression = (condition.Body as BinaryExpression).Right;
-            if (!(conditionValueExpression is ConstantExpression))
-            {
-                throw new InvalidOperationException("The right side of the condition expression must be a constant expression");
-            }
-            var conditionValue = (conditionValueExpression as ConstantExpression).Value;
-            var triger = propertyAccessor.ToString().Substring(propertyAccessor.ToString().IndexOf(".") + 1).Replace(".", "_");
-            var condtionType = condition.Body.NodeType.ToString();
+            
             var conditionCalc = condition.Compile();
             var display = conditionCalc(helper.ViewData.Model);
+
             if (display)
             {
-                return new MvcHtmlString(string.Format("ConditionalDisplay = 'true' trigger='{0}' conditionValue='{1}' condition='{2}'", triger, conditionValue,condtionType));
+                return new MvcHtmlString(string.Format("ConditionalDisplay = 'true'  triggers=\"{0}\" expression=\"{1}\"", trigers.ToString(),jsExpression));
             }
-            return new MvcHtmlString(string.Format("ConditionalDisplay = 'true' trigger='{0}' conditionValue='{1}'  condition='{2}' style='display:none;'", triger,conditionValue, condtionType));
+            return new MvcHtmlString(string.Format("ConditionalDisplay = 'true' triggers=\"{0}\" expression=\"{1}\" style='display:none;'", trigers.ToString(), jsExpression));
         }
         /// <summary> 
         /// Display or hide certain html element when specific condition is met, client side based
@@ -272,6 +273,88 @@ namespace Dow.SSD.Framework
             var returnValue = helper.TextBoxFor(field, new { calculateArgs = traceDomElement.ToString(), calculateExpression = calculateExpression, calculateField = true });
             return returnValue;
             //throw new NotImplementedException();
+        }
+    }
+
+    public class MyExpressionVisitor:ExpressionVisitor
+    {
+        private List<string> propertiesInExpression;
+        private StringBuilder jsExpression;
+        public MyExpressionVisitor()
+        {
+            this.propertiesInExpression = new List<string>();
+            this.jsExpression = new StringBuilder(16);
+        }
+        
+        public List<string> PropertiesInExpression
+        {
+            get
+            {
+                return this.propertiesInExpression;
+            }
+        }
+
+        public string JSExpression
+        {
+            get
+            {
+                return this.jsExpression.ToString();
+            }
+        }
+
+        protected override Expression VisitMember(MemberExpression node)
+        {
+            this.propertiesInExpression.Add(node.Member.Name);
+            this.jsExpression.Append(node.Member.Name);
+            return base.VisitMember(node);
+        }
+
+        protected override Expression VisitConstant(ConstantExpression node)
+        {
+            this.jsExpression.Append("'");
+            this.jsExpression.Append(node.Value);
+            this.jsExpression.Append("'");
+            return base.VisitConstant(node);
+        }
+
+        protected override Expression VisitBinary(BinaryExpression node)
+        {
+            this.Visit(node.Left);
+            var nodeType = node.NodeType;
+            switch (nodeType)
+            {
+                case ExpressionType.Equal:
+                    jsExpression.Append("==");
+                    break;
+                case ExpressionType.GreaterThan:
+                    jsExpression.Append(">");
+                    break;
+                case ExpressionType.LessThan:
+                    jsExpression.Append("<");
+                    break;
+                case ExpressionType.GreaterThanOrEqual:
+                    jsExpression.Append(">=");
+                    break;
+                case ExpressionType.LessThanOrEqual:
+                    jsExpression.Append("<=");
+                    break;
+                case ExpressionType.And:
+                    jsExpression.Append("&");
+                    break;
+                case ExpressionType.AndAlso:
+                    jsExpression.Append("&&");
+                    break;
+                case ExpressionType.Or:
+                    jsExpression.Append("|");
+                    break;
+                case ExpressionType.OrElse:
+                    jsExpression.Append("||");
+                    break;
+                default:
+                    throw new NotSupportedException(string.Format("{0} in Expression is not supported", nodeType.ToString()));
+            }
+            this.Visit(node.Right);
+            return node;
         }
     }
 }
