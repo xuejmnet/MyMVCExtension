@@ -1,0 +1,90 @@
+﻿@model object
+@{
+    var serviceType = ViewData["serviceType"] == null ? string.Empty : ViewData["serviceType"].ToString();
+    var modelName = ViewData["modelName"] == null ? string.Empty : ViewData["modelName"].ToString();
+    var searchProperty = ViewData["searchProperty"] == null ? string.Empty : ViewData["searchProperty"].ToString();
+}
+<link href="~/Content/themes/base/jquery.ui.all.css" rel="stylesheet" />
+<script>
+    var @(modelName)ajaxReturnData = null;
+    var @(modelName)selectedRecord = null;
+    $(document).ready(function () {
+        $("#@(modelName)PickMap").click(function () {
+            $("#@(modelName)PickMapBox").dialog({ resizable: false, modal: true, title: "Search" });
+        })
+
+        $("#@(modelName)SearchButton").click(function () {
+            var searchKey = $("#@(modelName)SearchKey").val();
+            $.ajax({
+                type: "GET",
+                url: "/api/PickMap/" + searchKey + "/@(serviceType)/@(searchProperty)",
+                success: function (data) {
+                    @(modelName)ajaxReturnData = data;
+                    $("#@(modelName)result").find("option").remove();
+                    for (var i = 0; i < data.length; i++) {
+                        var current = data[i];
+                        if (current.@searchProperty == "" || current.@searchProperty == null) {
+                            continue;
+                        }
+                        var option = "<option value=" + i + ">" + current.@searchProperty + "</option>";
+                        $("#@(modelName)result").append(option);
+
+                    }
+                }
+            }).fail(function (xhr, textStatus, err) {
+                alert('Error: ' + err);
+            })
+        })
+
+        $("#@(modelName)result").click(function(){
+            var index=$(this).val();
+            @(modelName)selectedRecord=@(modelName)ajaxReturnData[index];
+        })
+        $("#@(modelName)confirm").click(function(){
+            if($("#@(modelName)result").val()==null)
+            {
+                alert("Please selet one record");
+                return;
+            }
+            @{
+                var properties = Model.GetType().GetProperties();
+            }
+            @foreach (var property in properties)
+            {
+                var controlName = property.GetValue(Model, null);
+                var propertyName = property.Name;
+                <text>
+            $("#@controlName").val(@(modelName)selectedRecord.@propertyName); 
+                </text>
+            }
+            $("#@(modelName)PickMapBox").dialog('close');
+        })
+    })
+</script>
+<span id="@(modelName)PickMap" class="glyphicon glyphicon-eye-open">
+</span>
+<div id="@(modelName)PickMapBox" style="display:none">
+    <table class="gridTable">
+        <tr>
+            <td style="width:70%"></td>
+            <td style="width:30%"></td>
+        </tr>
+        <tr>
+            <td>
+                <input type="text" id="@(modelName)SearchKey" />
+            </td>
+            <td>
+                <input type="button" value="Search" id="@(modelName)SearchButton" />
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2"><select multiple="multiple" id="@(modelName)result" style="width:100%"></select></td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <input type="button" id="@(modelName)confirm" value="ok" />
+            </td>
+        </tr>
+
+        </table>
+</div>

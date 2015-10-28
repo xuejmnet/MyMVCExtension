@@ -1,0 +1,91 @@
+﻿@model object
+           @{
+               var prefix = ViewData["prefix"] == null ? string.Empty : ViewData["prefix"].ToString();
+           }
+<link href="~/Content/themes/base/jquery.ui.all.css" rel="stylesheet" />
+<script>
+    var @(prefix)ajaxReturnedData=null;
+    var @(prefix)currentSeletedPerson=null;
+    $(document).ready(function () {
+        $("#@(prefix)AddressBook").click(function () {
+            $("#@(prefix)GlobalSearchBox").dialog({ resizable: false, modal: true, title: "Global Address Book" });
+        })
+        $("#@(prefix)searchButton").click(function () {
+            var keyWord = $("#@(prefix)searchKey").val();
+            var waitingMsg="<option>System is querying,please wait...</option>"
+            $("#@(prefix)result").append(waitingMsg);
+            $.ajax({
+                type: "GET",
+                url: "/api/AddressBook/" + keyWord,
+                success: function (data) {
+                    @(prefix)ajaxReturnedData=data;
+                    $("#@(prefix)result").find("option").remove();
+                    for (var i = 0; i < data.length; i++) {
+                        var current = data[i];
+                        if(current.cn==""||current.cn==null)
+                        {
+                            continue;
+                        }
+                        var option="<option value="+i+">"+current.cn+"</option>";
+                        $("#@(prefix)result").append(option);
+                        
+                    }
+                }
+            }).fail(function (xhr, textStatus, err) {
+                alert('Error: ' + err);
+            })
+        })
+        $("#@(prefix)result").click(function(){
+            var index=$(this).val();
+            @(prefix)currentSeletedPerson=@(prefix)ajaxReturnedData[index];
+        })
+        $("#@(prefix)confirm").click(function () {
+            if($("#@(prefix)result").val()==null)
+            {
+                alert("Please selet one person");
+                return;
+            }
+            @{
+                var properties = Model.GetType().GetProperties();
+            }
+            @foreach (var property in properties)
+            {
+                var controlName = property.GetValue(Model, null);
+                var propertyName = property.Name;
+                <text>
+            $("#@controlName").val(@(prefix)currentSeletedPerson.@propertyName); 
+            </text>
+            }
+            $("#@(prefix)GlobalSearchBox").dialog('close');
+        })
+    })
+</script>
+<span id="@(prefix)AddressBook" class="glyphicon glyphicon-book">
+    @*<img src="~/Images/Addressbook.gif" />*@
+</span>
+<div id="@(prefix)GlobalSearchBox" style="display:none">
+    <table class="gridTable">
+        <tr>
+            <td style="width:70%"></td>
+            <td style="width:30%"></td>
+        </tr>
+        <tr>
+            <td>
+                <input type="text" id="@(prefix)searchKey" name="searchKey" />
+            </td>
+            <td>
+                <input type="button" id="@(prefix)searchButton" value="Search" />
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <select id="@(prefix)result" multiple="multiple" style="width:100%"></select>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <input type="button" id="@(prefix)confirm" value="OK" />
+            </td>
+        </tr>
+    </table>
+</div>

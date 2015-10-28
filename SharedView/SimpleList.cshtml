@@ -1,0 +1,65 @@
+﻿@model IEnumerable<string>
+@{
+    var fieldName = this.ViewData["FieldName"] as string;
+    var fieldId = this.ViewData["FieldID"] as string;
+    var valuesStr = this.ViewData["ValuesStr"] as string;
+}
+<script>
+    var @(fieldId)count=@(Model.Count());
+    $(document).ready(function () {
+        $("#@(fieldId)_AddNewButton").click(function () {
+            @(fieldId)count++;
+            var originalValue = $("#@fieldId").val();
+            originalValue += ($("#@(fieldId)_NewItem").val() + ";");
+            $("#@fieldId").val(originalValue);
+            var newline = $("#@(fieldId)NewLine").clone(true);
+            var value=newline.find("#@(fieldId)_NewItem").val();
+            var newlineId="@(fieldId)"+@(fieldId)count;
+            newline.attr("id",newlineId);
+            newline.find("#@(fieldId)_AddNewButton").attr("onclick", "@(fieldId)Delete('"+newlineId+"','"+value+"')");
+            newline.find("#@(fieldId)_AddNewButton").val("delete");
+            newline.find("#@(fieldId)_AddNewButton").attr("id", "");
+            newline.find("#@(fieldId)_NewItem").attr("id", "");
+            $("#@(fieldId)List").append(newline);
+            
+        })
+    })
+    function @(fieldId)Delete(rowId,deletedValue) {
+        //var deletedValue = $(this).parent().parent().find("input[type='text'").val();
+        //var deletedValue = $(this).parent("tr").find("input[type='text']").val();
+        $("#"+rowId).remove();
+        var originalValue = $("#@fieldId").val();
+        originalValue = originalValue.replace(deletedValue + ";", "");
+        $("#@fieldId").val(originalValue);
+    }
+</script>
+<table id="@(fieldId)List">
+    <tr id="@(fieldId)NewLine">
+        <td>
+            <input type="text" id="@(fieldId)_NewItem" />
+        </td>
+        <td>
+            <input type="button" id="@(fieldId)_AddNewButton" value="Add" />
+        </td>
+    </tr>
+    @{
+        var listLength = Model.Count();
+        var list = Model.ToList();
+    }
+    @for (int i = 0; i < list.Count; i++)
+    {
+        if(string.IsNullOrEmpty(list[i]))
+        {
+            continue;
+        }
+        <tr id="@(fieldId+i.ToString())">
+            <td>
+                <input type="text" value="@list[i]" />
+            </td>
+            <td>
+                <input type="button" onclick="@(fieldId)Delete('@(fieldId+i.ToString())','@list[i]')" value="delete" />
+            </td>
+        </tr>
+    }
+</table>
+<input type="hidden" name="@fieldName" id="@fieldId" value="@valuesStr" />
