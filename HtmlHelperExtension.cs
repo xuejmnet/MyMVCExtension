@@ -71,11 +71,11 @@ namespace Dow.SSD.Framework
             var propertyExpressionString = ExpressionHelper.GetExpressionText(propertyExpression);
             
             var propertyMetaData = ModelMetadata.FromLambdaExpression(propertyExpression, helper.ViewData);
-            var lovType = propertyMetaData.AdditionalValues["LOVType"] + "";
-            if(lovType==string.Empty)
+            if(!propertyMetaData.AdditionalValues.ContainsKey("LOVType"))
             {
-                throw new ArgumentOutOfRangeException("propertyExpression", "the field using Picklist must have Picklist attribute");
+                throw new InvalidProgramException(string.Format("Property {0} applied Picklist helper method must have Picklist Attribute defined", propertyMetaData.PropertyName));
             }
+            var lovType = propertyMetaData.AdditionalValues["LOVType"] + "";
             var lovs = _lovProvider.GetLOVByType(lovType);
             var valueCalculateFunc = propertyExpression.Compile();
             object value = null;
@@ -140,6 +140,64 @@ namespace Dow.SSD.Framework
             builder.InnerHtml = stringBuilder.ToString();
             return new MvcHtmlString(builder.ToString());
         }
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="TModel"></typeparam>
+        /// <param name="helper"></param>
+        /// <param name="propertyExpression"></param>
+        /// <param name="additionalAttr"></param>
+        /// <param name="blankItem"></param>
+        /// <param name="listType">For multiple selection/check box list, the parent LOV is not available, and ";" is not allowed to be appear for individual selection</param>
+        /// <param name="additionalSelection"></param>
+        /// <returns></returns>
+        public static MvcHtmlString PickListFor<TModel>(this HtmlHelper<TModel> helper,Expression<Func<TModel,string>> propertyExpression, object additionalAttr, string blankItem, PickListType listType,params string[] additionalSelection)
+        {
+            if(listType==PickListType.DropdownList)
+            {
+                return PickListFor(helper, propertyExpression, additionalAttr, blankItem);
+            }
+            var lov = GetAdditionalMetaDataFromExpression(helper, propertyExpression, "LOVType") + "";
+            if(string.IsNullOrEmpty(lov))
+            {
+                throw new ArgumentException("The PickList Attribute can not be empty");
+            }
+            var lovList = _lovProvider.GetLOVByType(lov);
+            var returnValue = new MvcHtmlString(string.Empty);
+            var propertyExpressionString = ExpressionHelper.GetExpressionText(propertyExpression);
+            var fullName = helper.ViewContext.ViewData.TemplateInfo.GetFullHtmlFieldName(propertyExpressionString);
+            var fullId=helper.ViewContext.ViewData.TemplateInfo.GetFullHtmlFieldId(propertyExpressionString);
+            var builder = new TagBuilder("input");
+            builder.Attributes.Add("name", fullName);
+            builder.GenerateId(fullName);
+            
+            var stringBuilder = new StringBuilder(16);
+            var values = GetPropertyValueFromExpression(helper, propertyExpression) + "";
+            var valuesArray = values.Split(';');
+            if(listType==PickListType.CheckBoxList)
+            {
+                foreach(var item in lovList)
+                {
+                    stringBuilder.Append(string.Format("<input type=\"checkbox\" lovType=\"{0}\" lovID=\"{1}\"",item.Type,item.ID));
+                    if(valuesArray.Contains(item.Value))
+                    {
+                        stringBuilder.Append("checked=\"checked\"");
+                    }
+                    stringBuilder.Append(string.Format("checkboxList=\"true\" field=\"{0}\" val=\"{1}\"", fullId,item.Value));
+                    stringBuilder.Append("/>");
+                    stringBuilder.Append(string.Format("<span>{0}</span>", item.DisplayValue));
+                }
+                stringBuilder.Append(string.Format("<input type=\"hidden\" id=\"{0}\" name=\"{1}\" />",fullId,fullName));
+                return new MvcHtmlString(stringBuilder.ToString());
+            }
+            else if(listType==PickListType.MultiSelectionList)
+            {
+                throw new NotImplementedException("Oops,extension for MultiSelectionList is not ready yet");
+            }
+            throw new NotSupportedException(string.Format("Picklist type {0} is not supported by the PickListFor extension"));
+        }
+
         /// <summary>
         /// 
         /// </summary>
@@ -236,7 +294,38 @@ namespace Dow.SSD.Framework
             var returnValue = string.Format("{0} field='{1}'", baseReturnValue, fullName);
             return new MvcHtmlString(returnValue);
         }
+        /// <summary>
+        /// Displays a query window to query certain model based on particual field, and map the rest field of the model to other Html element
+        /// </summary>
+        /// <typeparam name="TModel"></typeparam>
+        /// <typeparam name="TValue"></typeparam>
+        /// <param name="helper"></param>
+        /// <param name="field">the field that will be queried</param>
+        /// <param name="serviceType">the service type that will be used while quering</param>
+        /// <param name="modelName">the class name of the field</param>
+        /// <param name="propertyControlMapping">model field-html element mapping</param>
+        /// <returns></returns>
+        public static MvcHtmlString PickMap<TModel,TValue>(this HtmlHelper<TModel> helper, Expression<Func<TModel,TValue>> field,Type serviceType, string modelName,object propertyControlMapping)
+        {
+            var pickMapViewData = new ViewDataDictionary();
+            var expressionText = ExpressionHelper.GetExpressionText(field);
+            var fullName = helper.ViewContext.ViewData.TemplateInfo.GetFullHtmlFieldName(expressionText);
+            var name = fullName.Contains(".") ? fullName.Substring(fullName.LastIndexOf(".") + 1) : fullName;
 
+            pickMapViewData.Add("searchProperty", name);
+            pickMapViewData.Add("serviceType", serviceType);
+            pickMapViewData.Add("modelName", modelName);
+            var returnValue = helper.Partial("PickMap", propertyControlMapping, pickMapViewData);
+            return returnValue;
+        }
+        /// <summary>
+        /// Represent a field which is a calculate field, the calculate expression is assigned by using the [Calculate] attribute, and calculate expression is something like [Field1] +/-/*//[Field2]
+        /// </summary>
+        /// <typeparam name="TModel"></typeparam>
+        /// <typeparam name="TValue"></typeparam>
+        /// <param name="helper"></param>
+        /// <param name="field"></param>
+        /// <returns></returns>
         public static MvcHtmlString CalculateField<TModel,TValue>(this HtmlHelper<TModel> helper,Expression<Func<TModel,TValue>> field)
         {
             var memberExpression=field.Body as MemberExpression;
@@ -273,6 +362,74 @@ namespace Dow.SSD.Framework
             var returnValue = helper.TextBoxFor(field, new { calculateArgs = traceDomElement.ToString(), calculateExpression = calculateExpression, calculateField = true });
             return returnValue;
             //throw new NotImplementedException();
+        }
+
+        public static MvcHtmlString SimpleList<TModel>(this HtmlHelper<TModel> helper, Expression<Func<TModel,string>> propertyExpression)
+        {
+            return SimpleList<TModel>(helper, propertyExpression, ';');
+            
+        }
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <typeparam name="TModel"></typeparam>
+        /// <param name="helper"></param>
+        /// <param name="propertyExpression"></param>
+        /// <param name="separator">separator to split each list element</param>
+        /// <returns></returns>
+        public static MvcHtmlString SimpleList<TModel>(this HtmlHelper<TModel> helper, Expression<Func<TModel, string>> propertyExpression, char separator)
+        {
+            var values = GetPropertyValueFromExpression<TModel>(helper, propertyExpression);
+            var valueList = values.Split(separator);
+            var simpleListViewData = new ViewDataDictionary();
+            var expressionText = ExpressionHelper.GetExpressionText(propertyExpression);
+            var fullName = helper.ViewContext.ViewData.TemplateInfo.GetFullHtmlFieldName(expressionText);
+            var fullID = helper.ViewContext.ViewData.TemplateInfo.GetFullHtmlFieldId(expressionText);
+
+            simpleListViewData.Add("FieldName", fullName);
+            simpleListViewData.Add("FieldId", fullID);
+            simpleListViewData.Add("ValuesStr", values);
+            var returnValue = helper.Partial("SimpleList", valueList, simpleListViewData);
+            return returnValue;
+        }
+
+        private static object GetAdditionalMetaDataFromExpression<TModel, TValue>(HtmlHelper<TModel> helper, Expression<Func<TModel, TValue>> propertyExpression, string additionalMetaDataKey)
+        {
+            var memberAccessExpression = propertyExpression.Body as MemberExpression;
+            if (memberAccessExpression == null)
+            {
+                throw new ArgumentException("propertyExpression must be property access expression", "propertyExpression");
+            }
+            if (memberAccessExpression.Member.MemberType != MemberTypes.Property)
+            {
+                throw new ArgumentException("propertyExpression must be property access expression", "propertyExpression");
+            }
+            var propertyExpressionString = ExpressionHelper.GetExpressionText(propertyExpression);
+            var propertyMetaData = ModelMetadata.FromLambdaExpression(propertyExpression, helper.ViewData);
+            if (!propertyMetaData.AdditionalValues.ContainsKey(additionalMetaDataKey))
+            {
+                throw new ArgumentOutOfRangeException("additionalMetaDataKey", string.Format("Can not find metadata by metadata key {0}", additionalMetaDataKey));
+            }
+            return propertyMetaData.AdditionalValues[additionalMetaDataKey];
+        }
+
+        private static string GetPropertyValueFromExpression<TModel>(HtmlHelper<TModel> helper, Expression<Func<TModel, string>> propertyExpression)
+        {
+            var valueCalculateFunc = propertyExpression.Compile();
+            object value = null;
+
+            //In case the picklist usage as below
+            //PickListFor(model=>model.Address.Zip), we need to use the actual model type(typeof(Address) here) instead of the param type (typeof(model) in this case)
+            try
+            {
+                value = helper.ViewData.Model == null ? null : valueCalculateFunc(helper.ViewData.Model);
+            }
+            catch (NullReferenceException)
+            {
+                value = string.Empty;
+            }
+            var valueStr = value == null ? string.Empty : value.ToString();
+            return valueStr;
         }
     }
 
@@ -326,6 +483,9 @@ namespace Dow.SSD.Framework
                 case ExpressionType.Equal:
                     jsExpression.Append("==");
                     break;
+                case ExpressionType.NotEqual:
+                    jsExpression.Append("!=");
+                    break;
                 case ExpressionType.GreaterThan:
                     jsExpression.Append(">");
                     break;
@@ -356,5 +516,12 @@ namespace Dow.SSD.Framework
             this.Visit(node.Right);
             return node;
         }
+    }
+
+    public enum PickListType
+    {
+        DropdownList,
+        CheckBoxList,
+        MultiSelectionList
     }
 }

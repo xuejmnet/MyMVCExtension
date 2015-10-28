@@ -62,6 +62,7 @@
     <Compile Include="ChangeType.cs" />
     <Compile Include="ControllerExtension.cs" />
     <Compile Include="DisplayWhenAttribute.cs" />
+    <Compile Include="DOWControllerFactory.cs" />
     <Compile Include="EmailHTMLContentProviderConfig.cs" />
     <Compile Include="Enums.cs" />
     <Compile Include="ExcelHelper.cs" />
@@ -78,6 +79,7 @@
     <Compile Include="Infrastructure\IRepository.cs" />
     <Compile Include="IUserIDProvider.cs" />
     <Compile Include="LinkProviderConfig.cs" />
+    <Compile Include="PickMapAttrribute.cs" />
     <Compile Include="QueryableExtension.cs" />
     <Compile Include="IRoleProvider.cs" />
     <Compile Include="Infrastructure\ISortableQuery.cs" />
