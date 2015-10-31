@@ -60,17 +60,10 @@
     <Compile Include="ActionMemberCheckAttribute.cs" />
     <Compile Include="CalculateFieldAttribute.cs" />
     <Compile Include="ChangeType.cs" />
-    <Compile Include="ControllerExtension.cs" />
-    <Compile Include="DisplayWhenAttribute.cs" />
-    <Compile Include="DOWControllerFactory.cs" />
-    <Compile Include="EmailHTMLContentProviderConfig.cs" />
-    <Compile Include="Enums.cs" />
     <Compile Include="ExcelHelper.cs" />
     <Compile Include="HtmlHelperExtension.cs" />
     <Compile Include="IChangeLog.cs" />
-    <Compile Include="IEmailHTMLContentProvider.cs" />
     <Compile Include="IgnoreInTemplateQueryAttribute.cs" />
-    <Compile Include="ILinkProvider.cs" />
     <Compile Include="ILOV.cs" />
     <Compile Include="IModelCommon.cs" />
     <Compile Include="Infrastructure\IDomain.cs" />
@@ -78,9 +71,6 @@
     <Compile Include="Infrastructure\IQuery.cs" />
     <Compile Include="Infrastructure\IRepository.cs" />
     <Compile Include="IUserIDProvider.cs" />
-    <Compile Include="LinkProviderConfig.cs" />
-    <Compile Include="PickMapAttrribute.cs" />
-    <Compile Include="QueryableExtension.cs" />
     <Compile Include="IRoleProvider.cs" />
     <Compile Include="Infrastructure\ISortableQuery.cs" />
     <Compile Include="PickListAttribute.cs" />
@@ -96,10 +86,7 @@
       <DependentUpon>Resource.zh-CN.resx</DependentUpon>
     </Compile>
     <Compile Include="RoleProviderConfig.cs" />
-    <Compile Include="SearchMode.cs" />
     <Compile Include="SkipInChangeTrack.cs" />
-    <Compile Include="StringHelper.cs" />
-    <Compile Include="UserInfoHelper.cs" />
     <Compile Include="Utility\Utility.cs" />
   </ItemGroup>
   <ItemGroup>

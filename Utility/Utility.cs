@@ -17,87 +17,23 @@ using System.Web.UI;
 using System.Web.Mvc;
 using Dow.SSD.Framework;
 
-namespace DOW.SSD.Framework.Utility
+namespace xboxeer.HTMLExtension.Utility
 {
     public static class Utility
     {
         private static ModelMetadataProvider metaDataProvider = new CachedDataAnnotationsModelMetadataProvider();
 
         /// <summary>
-        /// Send a mail either in a Async way or Sync way, if using Async way, pass a SendCompletedEventHandler delegate to the sendCompletedEventHandler param
-        /// otherwise just pass a null to the sendCompletedEventHandler param
+        /// Export List<string> as simple html list in string
         /// </summary>
-        /// <param name="from"></param>
-        /// <param name="toList"></param>
-        /// <param name="ccList"></param>
-        /// <param name="subject"></param>
-        /// <param name="body"></param>
-        /// <param name="sendCompleteEventHandler"></param>
-        public static void SendMail(List<string> toList, List<string> ccList, string subject, string body, SendCompletedEventHandler sendCompleteEventHandler)
-        {
-            var mailFrom = ConfigurationManager.AppSettings["MailFrom"];
-            if (string.IsNullOrEmpty(mailFrom))
-            {
-                throw new NullReferenceException("Please add MailFrom settings in web.config!");
-            }
-            SendMail(mailFrom, toList, ccList, subject, body, sendCompleteEventHandler);
-        }
-
-        /// <summary>
-        /// Send a mail either in a Async way or Sync way, if using Async way, pass a SendCompletedEventHandler delegate to the sendCompletedEventHandler param
-        /// otherwise just pass a null to the sendCompletedEventHandler param
-        /// </summary>
-        /// <param name="from"></param>
-        /// <param name="toList"></param>
-        /// <param name="ccList"></param>
-        /// <param name="subject"></param>
-        /// <param name="body"></param>
-        /// <param name="sendCompleteEventHandler"></param>
-        public static void SendMail(string from, List<string> toList, List<string> ccList, string subject, string body, SendCompletedEventHandler sendCompleteEventHandler)
-        {
-            var mailFrom = from;
-            using (var mail = new MailMessage())
-            {
-                toList.ForEach(item => mail.To.Add(item));
-                ccList.ForEach(item => mail.CC.Add(item));
-                mail.Subject = subject;
-                mail.Body = body;
-                mail.IsBodyHtml = true;
-                mail.From = new MailAddress(mailFrom);
-                using (var smtpClient = new SmtpClient(Utility.GetSmtpServerAddress()))
-                {
-                    if (sendCompleteEventHandler != null)
-                    {
-                        smtpClient.SendCompleted += sendCompleteEventHandler;
-                        smtpClient.SendAsync(mail, mail);
-                    }
-                    else
-                    {
-                        smtpClient.Send(mail);
-                    }
-                }
-            }
-        }
-
-        public static string GetSmtpServerAddress()
-        {
-            if (HttpContext.Current.Request.Url.Host.ToLower().Contains("localhost"))
-            {
-                return ConfigurationManager.AppSettings["SmtpServerLocal"];
-            }
-            if (HttpContext.Current.Request.Url.Host.ToLower().Contains("jvd"))
-            {
-                return ConfigurationManager.AppSettings["SmtpServerDev"];
-            }
-            return ConfigurationManager.AppSettings["SmtpServerProd"];
-        }
-
-        internal static string ListToHTMLListString(this List<string> modifiedProductsList)
+        /// <param name="sourceStringList"></param>
+        /// <returns></returns>
+        public static string ListToHTMLListString(this List<string> sourceStringList)
         {
             var textWriter = new StringWriter();
             HtmlTextWriter writer = new HtmlTextWriter(textWriter);
             writer.RenderBeginTag(HtmlTextWriterTag.Ul);
-            modifiedProductsList.ForEach(item =>
+            sourceStringList.ForEach(item =>
             {
                 writer.RenderBeginTag(HtmlTextWriterTag.Li);
                 writer.WriteLine(item);
@@ -107,6 +43,12 @@ namespace DOW.SSD.Framework.Utility
             return textWriter.ToString();
         }
 
+        /// <summary>
+        /// Export List<T> as simple html table in string
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="sourceList"></param>
+        /// <returns></returns>
         public static string ListToHTMLTable<T>(this List<T> sourceList)
         {
             var textWriter = new StringWriter();
@@ -114,34 +56,6 @@ namespace DOW.SSD.Framework.Utility
             #region Render table
             writer.AddAttribute(HtmlTextWriterAttribute.Border, "1");
             writer.RenderBeginTag(HtmlTextWriterTag.Table);
-            //var properties = typeof(T).GetProperties();
-            //var properties = TypeDescriptor.GetProperties(typeof(T)).Cast<PropertyDescriptor>().ToArray();
-            //var metaDataTypeAttr = TypeDescriptor.GetAttributes(typeof(T))[typeof(MetadataTypeAttribute)] as MetadataTypeAttribute;
-            //if (metaDataTypeAttr != null)
-            //{
-            //    var metaDataType = metaDataTypeAttr.MetadataClassType;
-            //    var metaDataProperties = metaDataType.GetProperties();
-            //    foreach (var metaDataProperty in metaDataProperties)
-            //    {
-            //        var metaDataPropertyName = metaDataProperty.Name;
-            //        var metaDataAdditionalProperty = properties.Where(item => item.Name == metaDataPropertyName && item.PropertyType == metaDataProperty.PropertyType).FirstOrDefault();
-            //        if (metaDataAdditionalProperty != null)
-            //        {
-            //            var annotationsAttr = metaDataAdditionalProperty.Attributes.Cast<Attribute>().ToArray();
-            //            TypeDescriptor.AddAttributes(metaDataAdditionalProperty, annotationsAttr);
-            //        }
-            //    }
-            //}
-            //properties = properties.OrderBy<PropertyDescriptor, int>((property) =>
-            //{
-            //    //var orderAttribute = property.GetCustomAttributes(typeof(DisplayAttribute), true).FirstOrDefault() as DisplayAttribute;
-            //    var orderAttribute = property.Attributes[typeof(DisplayAttribute)] as DisplayAttribute;
-            //    if (orderAttribute != null && orderAttribute.GetOrder() != null)
-            //    {
-            //        return orderAttribute.GetOrder().GetValueOrDefault();
-            //    }
-            //    return 0;
-            //}).ToArray();
 
             ModelMetadata metaData = new ModelMetadata(metaDataProvider, null, null, typeof(T), typeof(T).Name);
             var propertiesMetaData = metaData.Properties.Where(item => item.IsComplexType == false).ToList();
@@ -195,6 +109,12 @@ namespace DOW.SSD.Framework.Utility
             return textWriter.ToString();
         }
 
+        /// <summary>
+        /// Loop the property of the queryTemplate, if the property is not null and the property is not attributed as IgnoreInTemplateQueryAttribute, bind to expression, 
+        /// </summary>
+        /// <typeparam name="TModel"></typeparam>
+        /// <param name="queryTemplate"></param>
+        /// <returns></returns>
         public static Expression<Func<TModel, bool>> BuildTemplateQueryExpression<TModel>(TModel queryTemplate)
         {
             var condition = Expression.Equal(Expression.Constant(1), Expression.Constant(1));
